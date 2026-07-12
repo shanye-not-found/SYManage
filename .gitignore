@@ -4,6 +4,10 @@
 *.env
 !.env.example          # 但允许提交示例模板(不含真实密钥)
 
+CLAUDE.md
+.claude
+
+
 # ===== Python =====
 __pycache__/           # Python 字节码缓存目录
 *.py[cod]              # 编译产物 .pyc / .pyo / .pyd
