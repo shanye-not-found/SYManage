@@ -1,0 +1,15 @@
+Metadata-Version: 2.4
+Name: symanage-backend
+Version: 0.1.0
+Summary: Backend for SYManage club management system
+Requires-Python: >=3.11
+Requires-Dist: alembic>=1.16.0
+Requires-Dist: fastapi[standard]>=0.115.0
+Requires-Dist: sqlmodel>=0.0.22
+Requires-Dist: psycopg[binary]>=3.2.0
+Requires-Dist: pydantic-settings>=2.7.0
+Requires-Dist: pyjwt>=2.10.0
+Requires-Dist: pwdlib[argon2]>=0.2.0
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0.0; extra == "dev"
+Requires-Dist: ruff>=0.8.0; extra == "dev"

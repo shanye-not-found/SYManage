@@ -1,0 +1,41 @@
+# ===== 敏感配置(最重要!绝不能提交)=====
+# .env 含 SECRET_KEY、数据库密码、superadmin 密码等,泄露 = 安全事故
+.env
+*.env
+!.env.example          # 但允许提交示例模板(不含真实密钥)
+
+# ===== Python =====
+__pycache__/           # Python 字节码缓存目录
+*.py[cod]              # 编译产物 .pyc / .pyo / .pyd
+*$py.class
+*.egg-info/            # pip install -e 生成的包元数据
+.eggs/
+build/
+dist/
+
+# ===== 虚拟环境 =====
+# 你用 Conda 环境 SYManage,一般不在项目内;但以防万一本地建了 venv
+.venv/
+venv/
+env/
+
+# ===== 测试 / 工具缓存 =====
+.pytest_cache/         # pytest 缓存
+.ruff_cache/           # ruff 缓存
+.mypy_cache/
+.coverage
+htmlcov/
+
+# ===== 数据库本地文件 =====
+# 你用 PostgreSQL,一般不产生本地 db 文件;但如果偶尔用 SQLite 调试
+*.sqlite3
+*.db
+
+# ===== IDE / 编辑器 =====
+.vscode/
+.idea/
+*.swp
+
+# ===== 操作系统 =====
+.DS_Store              # macOS
+Thumbs.db              # Windows
