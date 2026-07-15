@@ -1,6 +1,7 @@
 from sqlmodel import SQLModel
 import uuid
 from app.users.model import Permission
+from datetime import datetime
 
 class UserAddWhiteList(SQLModel):
     username: str
@@ -36,7 +37,10 @@ class WhitelistPublic(SQLModel):
     permission: Permission
     wechat_account: str
     retired: bool
-    working_year: int
+    created_at: datetime
+    retired_at: datetime | None
+    retired_description: str | None = None
+    highest_permission: Permission
     
 class WhiteListCreate(SQLModel):
     username: str
@@ -44,7 +48,7 @@ class WhiteListCreate(SQLModel):
     permission: Permission
     wechat_account: str
     retired: bool = False
-    working_year: int
+
     
 # class UserPublicFull(SQLModel):
 #     id: uuid.UUID

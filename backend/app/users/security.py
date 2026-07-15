@@ -34,3 +34,4 @@ def decode_access_token(token: str) -> str | None:
         return None
     except jwt.InvalidTokenError:
         return None
+    

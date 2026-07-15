@@ -13,7 +13,7 @@ export type Token = {
 }
 
 export type CurrentUser = {
-    id: string
+    id: number
     username: string
     email: string
     permission: Permission
