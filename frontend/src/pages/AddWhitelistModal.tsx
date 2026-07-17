@@ -154,7 +154,13 @@ function AddWhitelistModal({ isOpen, onClose, onSubmit , onSubmitMultiple }: Pro
         }
         setSubmittingMultiple(true);
         const whitelistList: WhitelistCreate[] = JSON.parse(jsonInput);
-
+        whitelistList.forEach(whitelist => {
+        if (!['bar_manager', 'tea_manager', 'cocktail_minister',
+                 'tea_minister', 'vice_president'].includes(whitelist.permission)) {
+                setError('越权警告！');
+                return;
+            }
+        })
         try {
             const responses = await create_whitelist_multiple(whitelistList);
             onSubmitMultiple(responses);
@@ -269,8 +275,13 @@ function AddWhitelistModal({ isOpen, onClose, onSubmit , onSubmitMultiple }: Pro
                     </button>
                 </div>
             </form>
-
-            <button onClick={handleCopyPrompt} >复制提示词</button>
+            <a 
+            href="https://chat.z.ai/"
+            target="_blank" 
+            rel="noopener noreferrer"
+            >
+                <button onClick={handleCopyPrompt} >复制提示词并跳转到 AI</button>
+            </a>
             <button onClick={onClose}>关闭</button>
         </div>
     )

@@ -124,10 +124,14 @@ def add_whitelist_all(session: Session, whitelist_json: list[WhiteListCreate]) -
         
     for whitelist in whitelist_json:
         email = whitelist.email
+        permission = whitelist.permission
         existing_whitelist = get_whitelist_email(session, email)
         if existing_whitelist:
-            raise ValueError("This manager has already exists in whitelist")
+            raise ValueError("Number {count_exist} manager has already exists in whitelist.")
+        if permission == Permission.superadmin or permission == Permission.president or permission == Permission.treasurer:
+            raise ValueError(f"Invalid Permission: Number {count_exist} manager.")
         count_exist += 1   
+        
     new_whitelists = [WhiteList(email=whitelist.email, username=whitelist.username,
                                     permission=whitelist.permission,wechat_account=whitelist.wechat_account,
                                     retired=whitelist.retired)
