@@ -1,3 +1,5 @@
+import secrets
+
 import jwt
 import datetime
 from pwdlib import PasswordHash
@@ -34,4 +36,7 @@ def decode_access_token(token: str) -> str | None:
         return None
     except jwt.InvalidTokenError:
         return None
+    
+def gen_handover_token() -> str:
+    return secrets.token_urlsafe(8) 
     

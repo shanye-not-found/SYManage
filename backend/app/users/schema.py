@@ -49,7 +49,25 @@ class WhiteListCreate(SQLModel):
     wechat_account: str
     retired: bool = False
 
+class HandoverTableCreate(SQLModel):
+    from_user_email: str
+    to_user_email: str
+    target_permission: Permission
+    self_permission: Permission
     
-# class UserPublicFull(SQLModel):
-#     id: uuid.UUID
-#     email: str
+class HandoverTablePublic(SQLModel):
+    token: str
+    to_user_email: str
+    target_permission: Permission
+    self_permission: Permission
+
+    
+class PermissionUpdate(SQLModel):
+    low_user_email:str
+    token: str
+
+    
+    
+
+
+    

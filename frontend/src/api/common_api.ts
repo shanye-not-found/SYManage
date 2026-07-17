@@ -57,3 +57,11 @@ export async function getCurrentUser(): Promise<CurrentUser> {
     })
     return response
 }
+
+export async function createUser(email: string, password: string): Promise<void> {
+    const response = await request<void>('users/register', 'POST', {}, {
+        "email": email,
+        "password": password
+    })
+    return response
+}

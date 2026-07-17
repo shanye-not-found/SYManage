@@ -13,9 +13,17 @@ class Permission(str,Enum):
     treasurer = "treasurer"
     tea_manager = "tea_manager"  
     bar_manager = "bar_manager"  
+    
+class Status(str,Enum):
+    pending = "pending"
+    completed = "completed"
+    
    
 def utc_now() -> datetime.datetime:
     return datetime.datetime.now(datetime.timezone.utc)
+
+def utc_now_plus10() -> datetime.datetime:
+    return datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=10)
 
 def get_current_year_int() -> int:
     return datetime.datetime.now().year
@@ -50,7 +58,20 @@ class WhiteList(SQLModel, table=True):
     retired_description: str = Field(nullable=True, default=None) 
     highest_permission: Permission = Field(nullable=False, default=Permission.cocktail_minister)
     
-    # 后续如果需要，可以再加 retired_year 记录退休年份
+class HandoverTable(SQLModel, table=True):
+    __tablename__ = "handover_table" # type: ignore
+    
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    token: str = Field(nullable=False, unique=True, index=True)
+    
+    from_user_email: str = Field(nullable=False)
+    to_user_email: str = Field(nullable=False)
+    target_permission: Permission = Field(nullable=False)
+    self_permission: Permission = Field(nullable=False)
+    status: Status = Field(nullable=False, default="pending")
+    created_at: datetime.datetime = Field(default_factory=utc_now)
+    expired_at: datetime.datetime = Field(default_factory=utc_now_plus10)
+    
 
     
     

@@ -40,3 +40,7 @@ export type WhitelistCreate = {
     wechat_account: string
     retired: boolean 
 }
+export type UserCreate = {
+    email: string
+    password: string
+}
