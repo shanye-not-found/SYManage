@@ -1,23 +1,21 @@
-import { useAuth } from './contexts/AuthContext';
+import React from 'react';  // Import React here
 import LoginPage from './pages/LoginPage';
-
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import NavPage from './pages/NavPage';  // Import the NavPage component here
+import UserManagePage from './pages/UserManagePage';  // Import the UserManagePage component here
+import RequireAuth from './components/RequireAuth';  // Import the RequiredAuth component here
 function App() {
-    const { currentUser, logout } = useAuth();   // 从 Context 取,不再自己管
+    return(
+        <Routes>
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/login" element={<LoginPage />}></Route>
 
-    // 没登录 → 显示登录页
-    if (!currentUser) {
-        return <LoginPage />;
-    }
-
-    // 登录了 → 显示欢迎页
-    return (
-        <div>
-            <h1>欢迎，{currentUser.username}！</h1>
-            <button onClick={logout}>注销</button>
-            <button onClick={() => console.log('查看白名单')}>查看白名单</button>
-        </div>
-
-    );
+            <Route element={<RequireAuth />}>
+                <Route path='/navpage' element={<NavPage />}></Route>
+                <Route path='/usermanage' element={<UserManagePage />}></Route>  // Add this line to include the login route
+            </Route>
+       </Routes>
+    )
 }
 
 export default App;

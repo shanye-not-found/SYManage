@@ -68,12 +68,9 @@ def read_me(curr_user: User = Depends(get_current_user)) -> UserPublic:
     )    
     
 @user_router.get("/whitelist", response_model=list[WhitelistPublic])
-def get_whitelist(session: Session = Depends(get_db), curr_user: User = Depends(get_current_user)) -> list[WhitelistPublic]:
-    if curr_user.whitelist.permission == Permission.superadmin or curr_user.whitelist.permission == Permission.president:
-        white_list = get_whitelist_all(session)
-        return [whitelist_to_public(whitelist) for whitelist in white_list]
-    else:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access the whitelist")  # 没有权限访问白名单
+def get_whitelist(session: Session = Depends(get_db)) -> list[WhitelistPublic]:
+    white_list = get_whitelist_all(session)
+    return [whitelist_to_public(whitelist) for whitelist in white_list]
 
 @user_router.post("/add_whitelist", response_model=WhitelistPublic)
 def add_whitelist(whitelist_info: WhiteListCreate,curr_user: User = Depends(get_current_user), session: Session = Depends(get_db)) -> WhitelistPublic:

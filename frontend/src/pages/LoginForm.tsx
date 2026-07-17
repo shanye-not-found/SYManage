@@ -1,15 +1,19 @@
+import React from 'react';  // 使用 React 18.2.0
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext'
-
+import { useNavigate } from 'react-router-dom';
 function LoginForm() {  
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const { login } = useAuth();
+    const navigate = useNavigate();  // 使用 useNavigate 来导航到其他页面
+
     async function handleLogin(e: React.SubmitEvent<HTMLFormElement>) {
             e.preventDefault();
             try {
                 await login(email, password);
+                navigate('/navpage');
             } catch (error) {
                 setError(error instanceof Error ? error.message : '登录失败')
             }

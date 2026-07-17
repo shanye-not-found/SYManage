@@ -1,49 +1,54 @@
 import { createContext, useState ,useEffect, useContext } from 'react';
 import type { CurrentUser } from '../types';
-import { getCurrentUser, login as apiLogin, logout as apiLogout } from '../api/api';
+import { getCurrentUser, login as apiLogin, logout as apiLogout } from '../api/common_api';
 
 
 type AuthContextValue = {
     currentUser: CurrentUser | null;
     login: (email: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
-    isAuthenticated: boolean;
+    loading: boolean;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [loading, setLoading] = useState(true);
+
 
     useEffect(() => {
         getCurrentUser().then((user) => {
             setCurrentUser(user);
-            setIsAuthenticated(user !== null);
         }).catch((error) => {
             apiLogout();
+        }).finally(() => {
+            setLoading(false);
         });
     }, []);
 
 
     const login = async (email: string, password: string) => {
-        await apiLogin(email, password);
-        getCurrentUser().then((user) => {
+        setLoading(true);
+        try{
+            await apiLogin(email, password);
+            const user = await getCurrentUser(); 
             setCurrentUser(user);
-            setIsAuthenticated(user !== null);
-        }).catch((error) => {
+        } catch(error) {
             apiLogout();
-        });
+            throw error;
+        } finally{
+            setLoading(false);
+        };
     };
 
     const logout = async () => {
         await apiLogout();
         setCurrentUser(null);
-        setIsAuthenticated(false);
     };
 
     return (
-        <AuthContext.Provider value={{ currentUser, login, logout, isAuthenticated }}>
+        <AuthContext.Provider value={{ currentUser, loading , login, logout }}>
             {children}
         </AuthContext.Provider>
     );

@@ -5,7 +5,8 @@ export type Permission =
   | 'cocktail_minister'
   | 'tea_minister'
   | 'treasurer'
-  | 'manager'
+  | 'bar_manager'
+  | 'tea_manager'
 
 export type Token = {
     access_token: string
@@ -13,9 +14,29 @@ export type Token = {
 }
 
 export type CurrentUser = {
-    id: number
+    id: string
     username: string
     email: string
     permission: Permission
+}
 
+export type WhitelistPublic = {
+    id: string
+    username: string
+    email: string
+    permission: Permission
+    wechat_account: string
+    retired: boolean | null
+    created_at: string
+    retired_at: string | null
+    retired_description: string | null
+    highest_permission: Permission
+}
+
+export type WhitelistCreate = {
+    username: string
+    email: string
+    permission: Permission
+    wechat_account: string
+    retired: boolean 
 }
