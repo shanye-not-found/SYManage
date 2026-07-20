@@ -2,7 +2,7 @@ import jwt
 from sqlmodel import Session, select
 
 from app.users.model import Status, User, WhiteList, Permission, HandoverTable, utc_now
-from app.users.schema import UserCreate, WhiteListCreate, WhitelistPublic, HandoverTableCreate,  PermissionUpdate
+from app.users.schema import HandoverTablePublic, PermissionUpdatePublic, UserCreate, WhiteListCreate, WhitelistPublic, HandoverTableCreate,  PermissionUpdate
 from app.users.security import gen_handover_token, hash_password, verify_password, decode_access_token
 from app.core.config import settings
 from fastapi.security import OAuth2PasswordBearer
@@ -67,9 +67,18 @@ def init_superadmin(session: Session):
     statement = select(WhiteList).where(WhiteList.email == superadmin_email)
     superadmin_whitelist = session.exec(statement).first()
     if not superadmin_whitelist:
-        add_manager_into_whitelist(session, WhiteListCreate(username=settings.SUPERADMIN_USERNAME, email=settings.SUPERADMIN_EMAIL
-                                                            , permission=Permission.superadmin,wechat_account=settings.SUPERADMIN_WECHAT_ACCOUNT
-                                                            , retired=False))
+        whitelist = WhiteListCreate(username=settings.SUPERADMIN_USERNAME, email=settings.SUPERADMIN_EMAIL
+                                    , permission=Permission.superadmin,wechat_account=settings.SUPERADMIN_WECHAT_ACCOUNT
+                                    , retired=False)
+ 
+        new_whitelist = WhiteList(email=whitelist.email, username=whitelist.username, 
+                                permission=whitelist.permission,wechat_account=whitelist.wechat_account, 
+                                retired=whitelist.retired)
+        session.add(new_whitelist)
+        session.commit()
+        session.refresh(new_whitelist)
+        return new_whitelist
+
     user = get_user_by_email(session, superadmin_email)   
     if not user:
         user = create_user(session, UserCreate(email=superadmin_email, password=superadmin_password))
@@ -98,6 +107,9 @@ def add_manager_into_whitelist(session: Session, whitelist: WhiteListCreate) -> 
     existing_whitelist = get_whitelist_email(session, email)
     if existing_whitelist:
         raise ValueError("This manager has already exists in whitelist")
+    
+    if whitelist.permission != Permission.tea_manager and whitelist.permission != Permission.bar_manager:
+        raise ValueError("Invalid Permission")
     
     new_whitelist = WhiteList(email=whitelist.email, username=whitelist.username, 
                               permission=whitelist.permission,wechat_account=whitelist.wechat_account, 
@@ -128,7 +140,7 @@ def add_whitelist_all(session: Session, whitelist_json: list[WhiteListCreate]) -
         existing_whitelist = get_whitelist_email(session, email)
         if existing_whitelist:
             raise ValueError(f"Number {count_exist} manager has already exists in whitelist.")
-        if permission == Permission.superadmin or permission == Permission.president or permission == Permission.treasurer:
+        if permission != Permission.tea_manager and permission != Permission.bar_manager:
             raise ValueError(f"Invalid Permission: Number {count_exist} manager.")
         count_exist += 1   
         
@@ -165,34 +177,133 @@ def calculate_highest_permission(permission: Permission, highest_permission: Per
 def get_handover_record(session: Session, token: str) -> HandoverTable | None:
     statement = select(HandoverTable).where(HandoverTable.token == token).with_for_update() #加锁
     return session.exec(statement).first()
-           
-def create_handover_record(session: Session, handover_table: HandoverTableCreate) -> HandoverTable:   
-    to_email = handover_table.to_user_email         
-    to_user = get_user_by_email(session, to_email)
+
+def get_record_by_email(session: Session, email: str) -> list[HandoverTable] | None:
+    statement = select(HandoverTable).where(HandoverTable.from_user_email == email).with_for_update() #加锁
+    return list(session.exec(statement).all())
+
+def get_whitelist_by_permission(session: Session, permission: Permission) -> WhiteList | None:
+    statement = select(WhiteList).where(WhiteList.permission == permission)
+    return session.exec(statement).first()
+    
+    # 这是create_handover_record的状态函数
+def get_handover_state(session: Session, target_permission: Permission, from_user: WhiteList) -> int:
+    if from_user.permission == Permission.superadmin:
+        if target_permission == Permission.president or target_permission == Permission.treasurer:
+            return 1 #不用降自身，需要直接找到permission==target_permission的manager，同时降权和升权，系统中如果没有那就直接加上，需要生成token
+        elif target_permission == Permission.bar_manager or target_permission == Permission.tea_manager:
+            return 9999 #不用降自身,基本用不到
+        else:
+            return 2 #需要直接找到permission==target_permission的manager，同时降权和升权，系统中如果没有那就直接加上，不需要生成token
+    elif from_user.permission == Permission.president:
+        if target_permission == Permission.president:
+            return 3 #降自身并升权，需要生成token
+        elif target_permission == Permission.bar_manager or target_permission == Permission.tea_manager:
+            return 9999 #不用降自身,基本用不到
+        else:
+            return 2 #不用降自身，需要直接找到permission==target_permission的manager，同时降权和升权，系统中如果没有那就直接加上，不需要生成token
+    elif from_user.permission == Permission.treasurer:
+        if target_permission == Permission.treasurer:
+            return 3 #降自身并升权，需要生成token
+        else:
+            return 4 #deny
+    else:
+        return 4 #deny
+
+# 如果不用降自身且不用token可以立即执行，但凡有一个就要直接生成表    
+def create_handover_record(session: Session, handover_table: HandoverTableCreate, self_email: str) -> HandoverTablePublic | PermissionUpdatePublic:      
+    to_user = get_user_by_email(session, handover_table.to_user_email)
+    from_user = get_whitelist_email(session, handover_table.from_user_email)
+    
     if not to_user: 
         raise ValueError("The user does not exist")
     
-    token = gen_handover_token()
-    while get_handover_record(session, token):
-        token = gen_handover_token()
-        
-    new_handover_record = HandoverTable(token=token,
-                                        from_user_email=handover_table.from_user_email, 
-                                        self_permission=handover_table.self_permission, 
-                                        to_user_email=to_email, 
-                                        target_permission=handover_table.target_permission)
-    session.add(new_handover_record)
-    session.commit()
-    session.refresh(new_handover_record)
-    return new_handover_record
+    if not from_user:
+        raise ValueError("The manager does not exist")
     
-def update_permission(session: Session, update_table: PermissionUpdate):
+    state = get_handover_state(session, handover_table.target_permission, from_user)
+    
+    if self_email != handover_table.from_user_email:
+        raise ValueError("Permission error")
+    
+    if handover_table.target_permission == Permission.superadmin:
+        raise ValueError("Fork!!! You are not allowed to do this!")
+    
+    if handover_table.from_user_email == handover_table.to_user_email:
+        raise ValueError("Self handover is not allowed")
+    
+    
+    if state == 2:
+        high_whitelist = get_whitelist_by_permission(session, handover_table.target_permission)
+        if high_whitelist:
+            low_whitelist = get_whitelist_email(session, handover_table.to_user_email)
+            if not low_whitelist: 
+               raise ValueError("The target user does not exist")
+            if handover_table.self_permission != Permission.bar_manager and handover_table.self_permission != Permission.tea_manager:
+                raise ValueError("Permission error")
+            high_whitelist.permission = handover_table.self_permission
+            low_whitelist.permission = handover_table.target_permission
+            low_whitelist.highest_permission = calculate_highest_permission(handover_table.target_permission, low_whitelist.highest_permission)
+            session.add(high_whitelist)
+            session.add(low_whitelist)
+            session.commit()
+            session.refresh(low_whitelist)
+            session.refresh(high_whitelist)
+            return PermissionUpdatePublic(high_username=high_whitelist.username, low_username=low_whitelist.username, target_permission=handover_table.target_permission,self_permission=handover_table.self_permission)
+        else:
+            low_whitelist = get_whitelist_email(session, handover_table.to_user_email)
+            if not low_whitelist: 
+               raise ValueError("The target user does not exist")
+            low_whitelist.permission = handover_table.target_permission
+            low_whitelist.highest_permission = calculate_highest_permission(handover_table.target_permission, low_whitelist.highest_permission)
+            session.add(low_whitelist)
+            session.commit()
+            session.refresh(low_whitelist)
+            
+            return PermissionUpdatePublic(high_username=None, low_username=low_whitelist.username, target_permission=handover_table.target_permission,self_permission=handover_table.self_permission)
+
+
+    elif state == 9999:
+        low_whitelist = get_whitelist_email(session, handover_table.to_user_email)
+        if not low_whitelist: 
+            raise ValueError("The target user does not exist")
+        low_whitelist.permission = handover_table.target_permission
+        low_whitelist.highest_permission = calculate_highest_permission(handover_table.target_permission, low_whitelist.highest_permission)
+        session.add(low_whitelist)
+        session.commit()
+        session.refresh(low_whitelist)
+        
+        return PermissionUpdatePublic(high_username=None, low_username=low_whitelist.username, target_permission=handover_table.target_permission,self_permission=handover_table.self_permission)
+        
+        
+        
+    elif state == 4:
+        raise ValueError("Permission error")
+    else:
+        low_whitelist = get_whitelist_email(session, handover_table.to_user_email)
+        if not low_whitelist: 
+            raise ValueError("The target user does not exist")
+        token = gen_handover_token()
+        while get_handover_record(session, token):
+            token = gen_handover_token()
+            
+        new_handover_record = HandoverTable(token=token,
+                                            from_user_email=handover_table.from_user_email, 
+                                            self_permission=handover_table.self_permission, 
+                                            to_user_email=handover_table.to_user_email, 
+                                            target_permission=handover_table.target_permission)
+        session.add(new_handover_record)
+        session.commit()
+        session.refresh(new_handover_record)
+        return HandoverTablePublic(token=token, low_username=low_whitelist.username, target_permission=handover_table.target_permission,self_permission=handover_table.self_permission)
+    # 能进到第二步的只有1 3
+def update_permission(session: Session, update_table: PermissionUpdate) -> PermissionUpdatePublic:
     token = update_table.token
     table = get_handover_record(session, token)
     if not table:
         raise ValueError("The token is invalid")
     
-    if table.status != "pending":
+    if table.status != Status.pending:
         raise ValueError("The token is not pending")
     
     if table.expired_at < utc_now():
@@ -201,20 +312,80 @@ def update_permission(session: Session, update_table: PermissionUpdate):
     if table.to_user_email != update_table.low_user_email:
         raise ValueError("The target user is not the same")
     
-    high_whitelist = get_whitelist_email(session, table.from_user_email)
-    low_whitelist = get_whitelist_email(session, update_table.low_user_email)
-    if high_whitelist and low_whitelist:
-        high_whitelist.highest_permission = calculate_highest_permission(table.self_permission, high_whitelist.highest_permission)
-        low_whitelist.highest_permission = calculate_highest_permission(table.target_permission, low_whitelist.highest_permission)
-        high_whitelist.permission = table.self_permission
-        low_whitelist.permission = table.target_permission
-        table.status = Status.completed
-        session.add(high_whitelist)
-        session.add(low_whitelist)
-        session.add(table)
-        session.commit()
-        session.refresh(table)
-        session.refresh(high_whitelist)
-        session.refresh(low_whitelist)
-        return table
-        
+    whitelist = get_whitelist_email(session, table.from_user_email)  
+    if not whitelist:
+        raise ValueError("The target user does not exist")  
+    
+    state = get_handover_state(session, table.target_permission, whitelist)
+    
+    if state == 1:
+        high_whitelist = get_whitelist_by_permission(session, table.target_permission)
+        low_whitelist = get_whitelist_email(session, update_table.low_user_email)
+        if not low_whitelist: 
+            raise ValueError("The target user does not exist")
+        if high_whitelist:
+            if table.self_permission != Permission.bar_manager and table.self_permission != Permission.tea_manager:
+                raise ValueError("Permission error")
+            high_whitelist.permission = table.self_permission
+            low_whitelist.permission = table.target_permission
+            table.status = Status.completed
+            tables = get_record_by_email(session, table.from_user_email)
+            if tables: 
+                for t in tables:
+                    if t.status == Status.pending:
+                        t.status = Status.cancelled
+                        session.add(t)
+            low_whitelist.highest_permission = calculate_highest_permission(table.target_permission, low_whitelist.highest_permission)
+            session.add(high_whitelist)
+            session.add(low_whitelist)
+            session.add(table)
+            session.commit()
+            session.refresh(table)
+            session.refresh(high_whitelist)
+            session.refresh(low_whitelist)
+            return PermissionUpdatePublic(high_username=high_whitelist.username, low_username=low_whitelist.username, target_permission=table.target_permission,self_permission=table.self_permission)
+        else:
+            low_whitelist.permission = table.target_permission
+            low_whitelist.highest_permission = calculate_highest_permission(table.target_permission, low_whitelist.highest_permission)
+            table.status = Status.completed
+            tables = get_record_by_email(session, table.from_user_email)
+            if tables: 
+                for t in tables:
+                    if t.status == Status.pending:
+                        t.status = Status.cancelled
+                        session.add(t)
+            session.add(low_whitelist)
+            session.add(table)
+            session.commit()
+            session.refresh(table)
+            session.refresh(low_whitelist)
+            return PermissionUpdatePublic(high_username=None, low_username=low_whitelist.username, target_permission=table.target_permission,self_permission=table.self_permission)
+                
+    elif state == 3:
+        high_whitelist = get_whitelist_email(session, table.from_user_email)
+        low_whitelist = get_whitelist_email(session, update_table.low_user_email)
+        if high_whitelist and low_whitelist:
+            if table.self_permission != Permission.bar_manager and table.self_permission != Permission.tea_manager:
+                raise ValueError("Permission error")
+            high_whitelist.permission = table.self_permission
+            low_whitelist.permission = table.target_permission
+            low_whitelist.highest_permission = calculate_highest_permission(table.target_permission, low_whitelist.highest_permission)
+            table.status = Status.completed
+            session.add(high_whitelist)
+            session.add(low_whitelist)
+            session.add(table)
+            tables = get_record_by_email(session, table.from_user_email)
+            if tables: 
+                for t in tables:
+                    if t.status == Status.pending:
+                        t.status = Status.cancelled
+                        session.add(t)
+            session.commit()
+            session.refresh(table)
+            session.refresh(high_whitelist)
+            session.refresh(low_whitelist)
+            return PermissionUpdatePublic(high_username=high_whitelist.username, low_username=low_whitelist.username, target_permission=table.target_permission,self_permission=table.self_permission)
+        else:
+            raise ValueError("Invalid user")
+    else:
+        raise ValueError("Permission error")

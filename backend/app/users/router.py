@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session
 from app.db.session import get_db
-from app.users.schema import HandoverTablePublic, HandoverTableCreate, PermissionUpdate, Token, UserCreate, UserLogin, UserPublic,WhitelistPublic,WhiteListCreate
+from app.users.schema import HandoverTablePublic, HandoverTableCreate, PermissionUpdate, Token, UserCreate, UserLogin, UserPublic,WhitelistPublic,WhiteListCreate, PermissionUpdatePublic
 from app.users.service import add_whitelist_all, create_user,add_manager_into_whitelist, whitelist_to_public
 from app.users.model import User
 from app.users.service import get_current_user, authenticate_user, get_whitelist_all, create_handover_record, update_permission
@@ -96,37 +96,28 @@ def add_whitelist_multiple(whitelist_info: list[WhiteListCreate],curr_user: User
     else:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to add multiple whitelist")  # 没有权限添加多个白名单
     
-@user_router.post("/gen_handover_table", response_model=HandoverTablePublic)
-def gen_handover_table(handover_table_info: HandoverTableCreate,curr_user: User = Depends(get_current_user), session: Session = Depends(get_db)) -> HandoverTablePublic:
+@user_router.post("/gen_handover_table", response_model=HandoverTablePublic | PermissionUpdatePublic)  # 生成交接表
+def gen_handover_table(handover_table_info: HandoverTableCreate,curr_user: User = Depends(get_current_user), session: Session = Depends(get_db)) -> HandoverTablePublic | PermissionUpdatePublic:
     if curr_user.whitelist.permission == Permission.superadmin or curr_user.whitelist.permission == Permission.president or curr_user.whitelist.permission == Permission.treasurer:
         if curr_user.whitelist.permission == Permission.treasurer and handover_table_info.target_permission != Permission.treasurer:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Treasurer can only handover to Treasurer")  # 财务只能交接给财务
      
         try:
-            new_table = create_handover_record(session, handover_table_info)
+            new_table = create_handover_record(session, handover_table_info, curr_user.email)
         except ValueError as e:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-        return HandoverTablePublic(
-                token=new_table.token,
-                to_user_email=new_table.to_user_email,
-                target_permission=new_table.target_permission,
-                self_permission=new_table.self_permission
-            )
+        return new_table
     else:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to gen handover table")  # 没有权限生成交接表
                
-@user_router.post("/handover_permission")   
-def handover_permission(update_table: PermissionUpdate, curr_user: User = Depends(get_current_user), session: Session = Depends(get_db)) -> None:
+@user_router.post("/handover_permission", response_model=PermissionUpdatePublic)   
+def handover_permission(update_table: PermissionUpdate, curr_user: User = Depends(get_current_user), session: Session = Depends(get_db)) -> PermissionUpdatePublic:
     if curr_user.email == update_table.low_user_email:
         try:
-            update_permission(session, update_table)
+            table = update_permission(session, update_table)
         except ValueError as e:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-        return None
+        return table
     
     else:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to handover permission")  # 没有权限交接权限
-    
-# 前端应该在调用之后再调用一次get，模态框传回调
-# 如何保证多端实时更新？
-    

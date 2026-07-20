@@ -58,9 +58,6 @@ const prompts = `# 角色
 - permission（字符串）：成员权限，只能从下面这几个值里取，必须完全按英文小写和下划线拼写，不要翻译、不要自创：
   - bar_manager（调酒部管理）
   - tea_manager（茶艺部管理）
-  - cocktail_minister（调酒部长）
-  - tea_minister（茶艺部长）
-  - vice_president（副社长）
   如果原始数据里写的是中文职位，请按上面的对照关系映射成对应的英文值。
 - wechat_account（字符串）：微信号。
 - retired（布尔值）：是否已退休，只能是 true 或 false（不加引号的 JSON 布尔值，不是字符串 "true"）。如果原始数据没有说明，默认填 false。
@@ -225,9 +222,6 @@ function AddWhitelistModal({ isOpen, onClose, onSubmit , onSubmitMultiple }: Pro
                     >
                         <option value="bar_manager">调酒部管理</option>
                         <option value="tea_manager">茶艺部管理</option>
-                        <option value="cocktail_minister">调酒部长</option>
-                        <option value="tea_minister">茶艺部长</option>
-                        <option value="vice_president">副社长</option>
                     </select>
                 </div>
                 
@@ -270,8 +264,8 @@ function AddWhitelistModal({ isOpen, onClose, onSubmit , onSubmitMultiple }: Pro
                 </div>
                 
                 <div>
-                    <button type="submit" disabled={submittingOne}>
-                        {submittingOne ? '提交中...' : '批量添加'}
+                    <button type="submit" disabled={submittingMultiple}>
+                        {submittingMultiple ? '提交中...' : '批量添加'}
                     </button>
                 </div>
             </form>

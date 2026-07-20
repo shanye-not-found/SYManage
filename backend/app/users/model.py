@@ -3,6 +3,8 @@ import datetime
 from enum import Enum
 
 from sqlmodel import Field, SQLModel, Relationship
+from sqlalchemy import Column
+from sqlalchemy.types import DateTime
 
 class Permission(str,Enum):
     superadmin = "superadmin"
@@ -17,6 +19,7 @@ class Permission(str,Enum):
 class Status(str,Enum):
     pending = "pending"
     completed = "completed"
+    cancelled = "cancelled"
     
    
 def utc_now() -> datetime.datetime:
@@ -38,8 +41,8 @@ class User(SQLModel, table=True):
     whitelist_id: uuid.UUID = Field(foreign_key="white_list.id",nullable=False)
     whitelist: "WhiteList" = Relationship(back_populates="user") # type: ignore
 
-    created_at: datetime.datetime = Field(default_factory=utc_now)
-    updated_at: datetime.datetime = Field(default_factory=utc_now)
+    created_at: datetime.datetime = Field(default_factory=utc_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+    updated_at: datetime.datetime = Field(default_factory=utc_now, sa_column=Column(DateTime(timezone=True), nullable=False))
 
 class WhiteList(SQLModel, table=True):
     __tablename__ = "white_list" # type: ignore
@@ -53,8 +56,8 @@ class WhiteList(SQLModel, table=True):
     user: User | None = Relationship(back_populates="whitelist")
     
     retired: bool = Field(default=False)
-    created_at: datetime.datetime = Field(nullable = False, default_factory=utc_now)
-    retired_at: datetime.datetime = Field(nullable=True, default=None) # 退休时间，可以为空
+    created_at: datetime.datetime = Field(default_factory=utc_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+    retired_at: datetime.datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
     retired_description: str = Field(nullable=True, default=None) 
     highest_permission: Permission = Field(nullable=False, default=Permission.cocktail_minister)
     
@@ -69,8 +72,8 @@ class HandoverTable(SQLModel, table=True):
     target_permission: Permission = Field(nullable=False)
     self_permission: Permission = Field(nullable=False)
     status: Status = Field(nullable=False, default="pending")
-    created_at: datetime.datetime = Field(default_factory=utc_now)
-    expired_at: datetime.datetime = Field(default_factory=utc_now_plus10)
+    created_at: datetime.datetime = Field(default_factory=utc_now, sa_column=Column(DateTime(timezone=True), nullable=False))
+    expired_at: datetime.datetime = Field(default_factory=utc_now_plus10, sa_column=Column(DateTime(timezone=True), nullable=False))
     
 
     

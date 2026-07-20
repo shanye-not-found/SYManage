@@ -57,15 +57,19 @@ class HandoverTableCreate(SQLModel):
     
 class HandoverTablePublic(SQLModel):
     token: str
-    to_user_email: str
+    low_username: str
     target_permission: Permission
     self_permission: Permission
-
     
 class PermissionUpdate(SQLModel):
     low_user_email:str
     token: str
 
+class PermissionUpdatePublic(SQLModel):
+    high_username: str | None
+    low_username: str
+    target_permission: Permission
+    self_permission: Permission
     
     
 

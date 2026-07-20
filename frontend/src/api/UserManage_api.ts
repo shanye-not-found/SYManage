@@ -1,4 +1,4 @@
-import type { WhitelistPublic , WhitelistCreate } from "../types.ts";
+import type { PermissionUpdate , WhitelistPublic , WhitelistCreate, HandoverTableCreate , HandoverTablePublic, PermissionUpdatePublic} from "../types.ts";
 import { request } from "./common_api.ts"
 
 export async function get_whitelist(): Promise<WhitelistPublic[]> {
@@ -32,4 +32,25 @@ export async function create_whitelist_multiple(whitelist: WhitelistCreate[]): P
     return await request<WhitelistPublic[]>(`users/add_whitelist_multiple`, "POST", 
         { "Authorization": `Bearer ${ token }` }, whitelist);
 
+}
+
+export async function create_handover_table(handover_table: HandoverTableCreate): Promise<HandoverTablePublic | PermissionUpdatePublic> {
+    const token = localStorage.getItem("token");
+    
+    if ( !token ){
+        throw new Error("Unauthorized"); // Handle unauthorized access
+    }
+    return await request<HandoverTablePublic>(`users/gen_handover_table`, "POST", 
+        { "Authorization": `Bearer ${ token }` }, handover_table);
+
+}
+
+export async function update_permission(update_table: PermissionUpdate): Promise<void> {
+    const token = localStorage.getItem("token");
+    
+    if ( !token ){
+        throw new Error("Unauthorized"); // Handle unauthorized access
+    }
+    return await request<void>(`users/update_permission`, "POST", 
+        { "Authorization": `Bearer ${ token }` }, update_table);
 }

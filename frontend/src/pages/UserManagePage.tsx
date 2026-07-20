@@ -4,13 +4,13 @@ import { get_whitelist } from '../api/UserManage_api';
 import type { WhitelistPublic } from '../types';
 import UserCard from '../components/UserCard'
 import AddWhitelistModal from './AddWhitelistModal';
-
+import HandoverModal from './HandoverModal';
 function UserManagePage() {
     const [whitelists, setWhitelists] = useState<WhitelistPublic[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showAddModal, setShowAddModal] = useState(false); // 控制添加白名单模态框的显示与隐藏
-    
+    const [showHandover, setShowHandover] = useState(false); // 控制任职交接模态框的显示与隐藏
 
     useEffect(() => {
         // 获取用户列表
@@ -70,6 +70,12 @@ function UserManagePage() {
     function onSubmitMultiple(whitelistList: WhitelistPublic[]){
         setWhitelists(prev => [...prev, ...whitelistList])
     }
+    function onCloseHandover(){
+        setShowHandover(false);
+    }
+    function onSubmitUpdate(){
+        return null; // 你可以在这里添加实际的更新逻辑
+    } 
 
 
 
@@ -79,7 +85,7 @@ function UserManagePage() {
             {renderContent()}
             {Buttons()}
             <AddWhitelistModal isOpen={showAddModal} onClose={onCloseModal} onSubmit={onSubmitOne} onSubmitMultiple={onSubmitMultiple} />
-
+            {showHandover && <HandoverModal onCloseHandover={onCloseHandover} onSubmitUpdate={onSubmitUpdate} />}
         </div>
 
     );

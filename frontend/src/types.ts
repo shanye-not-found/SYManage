@@ -44,3 +44,31 @@ export type UserCreate = {
     email: string
     password: string
 }
+
+export type HandoverTableCreate = {
+    from_user_email: string
+    to_user_email: string
+    target_permission: Permission
+    self_permission: Permission
+}
+
+export type HandoverTablePublic = {
+    token: string
+    to_user_name: string
+    target_permission: Permission
+    self_permission: Permission
+}
+
+
+export type PermissionUpdate={    
+    low_user_email:string,
+    token: string
+}
+
+export type PermissionUpdatePublic={
+    high_username: string | null,
+    low_username: string
+    target_permission: Permission
+    self_permission: Permission
+}
+    
