@@ -51,7 +51,7 @@ function UserManagePage() {
         return (
             <div>
                 <button onClick={() => setShowAddModal(true)}>添加白名单</button>
-                <div>任职交接</div>
+                <button onClick={() => setShowHandover(true)}>任职交接</button>
                 <div>退休</div>
                 <div>删除（Superadmin）</div>
             </div>
