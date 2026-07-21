@@ -1,26 +1,35 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import type { Permission } from '../types';
-import { create_handover_table } from '../api/UserManage_api';
-import type { HandoverTableCreate, HandoverTablePublic,  } from '../types';
+import type { Permission, PermissionUpdate } from '../types';
+import { create_handover_table, update_permission } from '../api/UserManage_api';
+import type { HandoverTableCreate,  } from '../types';
 
 type HandoverModalProps = {
     onCloseHandover: () => void;
-    onSubmitUpdate: () => void;
 }
 
 
-function HandoverModal({ onCloseHandover, onSubmitUpdate }: HandoverModalProps) {
+function HandoverModal({ onCloseHandover }: HandoverModalProps) {
     const { currentUser } = useAuth();
 
     // 需要填的就是to的邮箱，自己的权限和对方的权限
     const [toEmail, setToEmail] = useState('');
     const [targetPermission, setTargetPermission] = useState<Permission>('bar_manager');
+    const [selfPermission, setSelfPermission] = useState<Permission>('bar_manager');
     const [error, setError] = useState('');
     const [resmsg, setResmsg] = useState('');
     const [loading, setLoading] = useState(false); // 添加加载状态变量
     const [token, setToken] = useState('');
+    const [fillinToken, setFillinToken] = useState('');
+    const [permission, setPermission] = useState<Permission>('bar_manager');
+    useEffect(() => {
+        if (currentUser !== null) {
+            setPermission(currentUser.permission);
+        }
+    }, [currentUser]); 
+
+
 
     function showeOptions(permission: Permission) {
         if (permission === "superadmin" || permission === "president"){
@@ -47,6 +56,10 @@ function HandoverModal({ onCloseHandover, onSubmitUpdate }: HandoverModalProps) 
                     <option value="treasurer">财务部长</option>
                 </select>
             )
+        }else {
+            return(
+                <p>您无权进行权限变动！</p>
+            )
         }
     }
     function copyToken() {
@@ -55,96 +68,148 @@ function HandoverModal({ onCloseHandover, onSubmitUpdate }: HandoverModalProps) 
             alert('Token copied to clipboard!'); // 提示用户复制成功
         }
     }
+
+
     if (currentUser !== null) {
-        const [selfPermission, setSelfPermission] = useState<Permission>(currentUser.permission);
-            const handleSubmit = async (e: React.SubmitEvent) => {
-                e.preventDefault();
-                if (!toEmail) {
-                    setError('Email is required.');
-                    return;
-                }
-                if (loading){
-                    return; // 防止重复提交
-                }
-                setError(''); // 清空错误信息
-                setResmsg(''); // 清空响应信息
-                setLoading(true); // 设置加载状态为true
+        const handleSubmit = async (e: React.SubmitEvent) => {
+            e.preventDefault();
+            if (!toEmail) {
+                setError('Email is required.');
+                return;
+            }
+            if (loading){
+                return; // 防止重复提交
+            }
+            setError(''); // 清空错误信息
+            setResmsg(''); // 清空响应信息
+            setLoading(true); // 设置加载状态为true
+            setToEmail(''); // 清空输入框
 
-                const new_table: HandoverTableCreate = {
-                    from_user_email: currentUser.email,
-                    to_user_email: toEmail,
-                    target_permission: targetPermission,
-                    self_permission: selfPermission,
-                };
-                try {
-                    const response = await create_handover_table(new_table);
-                    if ('token' in response) {
-                        // 这里 TS 会把 response 收窄成 HandoverTablePublic
-                        setToken(response.token);
-                        const msg = '您已成功生成交接表，请再次确认交接信息:\n交接人姓名：' + response.to_user_name + '\n将要赋予对方的权限：' + response.target_permission + '\n原高层管理将要获得的权限：' + response.self_permission + "\n\n交接秘钥："+ token+"\n点击复制秘钥以复制";
-                        setResmsg(msg);
-                    }else{
-                        const msg = '您已成功更改权限！请再次确认交接信息:\n原高层管理姓名：' + response.high_username+ '\n交接人姓名：'+ response.low_username + '\n赋予对方的权限：' + response.target_permission + '\n原高层管理将要获得的权限：' + response.self_permission;
-                        setResmsg(msg);
-                    }
-
-                }catch (error) {
-                    setError(error instanceof Error ? error.message : 'Failed to create handover table.');
-                }finally {
-                    setLoading(false); // 设置加载状态为false
-                }
+            const new_table: HandoverTableCreate = {
+                from_user_email: currentUser.email,
+                to_user_email: toEmail,
+                target_permission: targetPermission,
+                self_permission: selfPermission,
             };
-            return (
-                <div className="modal">
-                    <form onSubmit={handleSubmit}>
-                        <h2>任职交接</h2>
+            try {
+                const response = await create_handover_table(new_table);
+                if ('token' in response) {
+                    // 这里 TS 会把 response 收窄成 HandoverTablePublic
+                    setToken(response.token);
+                    const msg = '您已成功生成交接表，请再次确认交接信息:\n交接人姓名：' + response.to_user_name + '\n将要赋予对方的权限：' + response.target_permission + '\n原高层管理将要获得的权限：' + response.self_permission + "\n\n交接秘钥："+ response.token +"\n点击复制秘钥以复制";
+                    setResmsg(msg);
+                }else{
+                    const msg = '您已成功更改权限！请再次确认交接信息:\n原高层管理姓名：' + response.high_username+ '\n交接人姓名：'+ response.low_username + '\n赋予对方的权限：' + response.target_permission + '\n原高层管理将要获得的权限：' + response.self_permission;
+                    setResmsg(msg);
+                }
 
-                        {error && <div style={{ color: 'red' }}>{error}</div>}
+            }catch (error) {
+                setError(error instanceof Error ? error.message : 'Failed to create handover table.');
+            }finally {
+                setLoading(false); // 设置加载状态为false
+            }
+        };
+        const handleUpdate = async (e: React.SubmitEvent) => {
+            e.preventDefault();
 
-                        <div>
-                            <label>交接人邮箱：</label>
-                            <input
-                                type="email"
-                                value={toEmail}
-                                onChange={e => setToEmail(e.target.value)}
-                                placeholder="对方的邮箱"
-                                required
-                            />
-                        </div>
+            if (!fillinToken) {
+                setError('Token is required.');
+                return;
+            }
+            if (loading){
+                return; // 防止重复提交
+            }
+            setError(''); // 清空错误信息
+            setResmsg(''); // 清空响应信息
+            setLoading(true); // 设置加载状态为true
+            setFillinToken(''); // 清空填入的token
+            const table : PermissionUpdate={low_user_email: currentUser.email, token: fillinToken}  
+            try {
+                const response = await update_permission(table);
+                const msg = '您已成功更改权限！:\n原高层管理姓名：' + response.high_username+ '\n交接人姓名：'+ response.low_username + '\n您获得的权限：' + response.target_permission ;
+                setResmsg(msg);
+            }catch (error) {
+                setError(error instanceof Error ? error.message : 'Failed to update permission.');
+            }finally {
+                setLoading(false); // 设置加载状态为false
+            }
+        };
+        
 
-                        <div>
-                            <label>赋予对方的权限：</label>
-                            {showeOptions(selfPermission)}
-                        </div>
+        return (
+            <div className="modal">
+                <form onSubmit={handleSubmit}>
+                    <h2>任职交接</h2>
 
-                        <div>
-                            <label>原高层管理将要获得的权限：</label>
-                            <select
-                                value={selfPermission}
-                                onChange={e => setSelfPermission(e.target.value as Permission)}
-                            >
-                                <option value="bar_manager">调酒部管理</option>
-                                <option value="tea_manager">茶艺部管理</option>
-                            </select>
-                        </div>
+                    {error && <div style={{ color: 'red' }}>{error}</div>}
 
-                        <div>
-                            <button type="submit" disabled={loading}>
-                                {loading ? '生成中...' : '生成交接表'}
-                            </button>
-                        </div>
-                    </form>
+                    <div>
+                        <label>交接人邮箱：</label>
+                        <input
+                            type="email"
+                            value={toEmail}
+                            onChange={e => setToEmail(e.target.value)}
+                            placeholder="对方的邮箱"
+                            required
+                        />
+                    </div>
 
-                    {resmsg && (
-                        <div style={{ whiteSpace: 'pre-wrap', color: 'green' }}>
-                            {resmsg}
-                        </div>
-                    )}
+                    <div>
+                        <label>赋予对方的权限：</label>
+                        {showeOptions(permission)}
+                    </div>
 
-                    <button onClick={onCloseHandover}>关闭</button>
-                    <button onClick={copyToken}>复制秘钥</button>
-                </div>
-            );
+                    <div>
+                        <label>原高层管理将要获得的权限：</label>
+                        <select
+                            value={selfPermission}
+                            onChange={e => setSelfPermission(e.target.value as Permission)}
+                        >
+                            <option value="bar_manager">调酒部管理</option>
+                            <option value="tea_manager">茶艺部管理</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <button type="submit" disabled={loading}>
+                            {loading ? '生成中...' : '生成交接表'}
+                        </button>
+                    </div>
+                </form>
+
+                <hr />
+
+                <form onSubmit={handleUpdate}>
+                    <h2>填入秘钥完成交接</h2>
+
+                    <div>
+                        <label>交接秘钥：</label>
+                        <input
+                            type="text"
+                            value={fillinToken}
+                            onChange={e => setFillinToken(e.target.value)}
+                            placeholder="请输入对方发来的交接秘钥"
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <button type="submit" disabled={loading}>
+                            {loading ? '提交中...' : '确认交接'}
+                        </button>
+                    </div>
+                </form>
+
+                {resmsg && (
+                    <div style={{ whiteSpace: 'pre-wrap', color: 'green' }}>
+                        {resmsg}
+                    </div>
+                )}
+
+                <button onClick={onCloseHandover}>关闭</button>
+                <button onClick={copyToken}>复制秘钥</button>
+            </div>
+        );
 
         }
     }

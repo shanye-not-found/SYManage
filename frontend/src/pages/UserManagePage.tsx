@@ -12,12 +12,11 @@ function UserManagePage() {
     const [showAddModal, setShowAddModal] = useState(false); // 控制添加白名单模态框的显示与隐藏
     const [showHandover, setShowHandover] = useState(false); // 控制任职交接模态框的显示与隐藏
 
-    useEffect(() => {
-        // 获取用户列表
+    function renderCard(){
         setLoading(true);
         setError(null); // 清空之前的错误
         get_whitelist().then((whitelists) => {
-            const fwl = whitelists.filter((whitelist) => whitelist.username !== "superadmin"); // 过滤掉已退休的用户
+            const fwl = whitelists.filter((whitelist) => whitelist.username !== "superadmin");
             setWhitelists(fwl);
         }).catch((error) => {
             console.error('获取白名单失败:', error);
@@ -25,6 +24,11 @@ function UserManagePage() {
         }).finally(() => {
             setLoading(false);
         });
+    }
+
+    useEffect(() => {
+        // 获取用户列表
+        renderCard();
     }, []);
 
     function renderContent(){
@@ -72,10 +76,9 @@ function UserManagePage() {
     }
     function onCloseHandover(){
         setShowHandover(false);
+        renderCard();
     }
-    function onSubmitUpdate(){
-        return null; // 你可以在这里添加实际的更新逻辑
-    } 
+
 
 
 
@@ -85,7 +88,7 @@ function UserManagePage() {
             {renderContent()}
             {Buttons()}
             <AddWhitelistModal isOpen={showAddModal} onClose={onCloseModal} onSubmit={onSubmitOne} onSubmitMultiple={onSubmitMultiple} />
-            {showHandover && <HandoverModal onCloseHandover={onCloseHandover} onSubmitUpdate={onSubmitUpdate} />}
+            {showHandover && <HandoverModal onCloseHandover={onCloseHandover} />}
         </div>
 
     );

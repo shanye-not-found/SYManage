@@ -7,7 +7,7 @@ from alembic import context
 
 from app.core.config import settings
 from sqlmodel import SQLModel
-from app.users.model import User, WhiteList
+from app.users.model import User, WhiteList, HandoverTable
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config

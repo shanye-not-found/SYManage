@@ -45,12 +45,12 @@ export async function create_handover_table(handover_table: HandoverTableCreate)
 
 }
 
-export async function update_permission(update_table: PermissionUpdate): Promise<void> {
+export async function update_permission(update_table: PermissionUpdate): Promise<PermissionUpdatePublic> {
     const token = localStorage.getItem("token");
     
     if ( !token ){
         throw new Error("Unauthorized"); // Handle unauthorized access
     }
-    return await request<void>(`users/update_permission`, "POST", 
+    return await request<PermissionUpdatePublic>(`users/handover_permission`, "POST", 
         { "Authorization": `Bearer ${ token }` }, update_table);
 }
