@@ -6,7 +6,9 @@ export async function get_whitelist(): Promise<WhitelistPublic[]> {
     if (!token ){
         throw new Error("Unauthorized"); // Handle unauthorized access
     }
-    return await request<WhitelistPublic[]>(`users/whitelist`, "GET");
+    return await request<WhitelistPublic[]>(`users/whitelist`, "GET",
+        { "Authorization": `Bearer ${ token }` }
+    );
 }
 
 export async function create_whitelist(whitelist: WhitelistCreate): Promise<WhitelistPublic> {
