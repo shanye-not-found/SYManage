@@ -5,6 +5,7 @@ import type { WhitelistPublic } from '../types';
 import UserCard from '../components/UserCard'
 import AddWhitelistModal from './AddWhitelistModal';
 import HandoverModal from './HandoverModal';
+import { useAuth } from '../contexts/AuthContext';
 function UserManagePage() {
     const now = new Date(); 
     const nowYear = now.getFullYear(); 
@@ -82,10 +83,25 @@ function UserManagePage() {
         }
     }
     function Buttons(){
+        const { currentUser } = useAuth(); // 获取当前用户
+
+        // 权限控制：只有 superadmin 和 president 可以添加白名单
+        const canAddWhitelist = currentUser?.permission === 'superadmin' ||
+                               currentUser?.permission === 'president';
+
+        // 权限控制：只有 superadmin、president、treasurer 可以进行任职交接
+        const canHandover = currentUser?.permission === 'superadmin' ||
+                           currentUser?.permission === 'president' ||
+                           currentUser?.permission === 'treasurer';
+
         return (
             <div>
-                <button onClick={() => setShowAddModal(true)}>添加白名单</button>
-                <button onClick={() => setShowHandover(true)}>任职交接</button>
+                {canAddWhitelist && (
+                    <button onClick={() => setShowAddModal(true)}>添加白名单</button>
+                )}
+                {canHandover && (
+                    <button onClick={() => setShowHandover(true)}>任职交接</button>
+                )}
                 <div>退休</div>
                 <div>删除（Superadmin）</div>
                 <button onClick={() => handleLeftChange()}>左键</button>

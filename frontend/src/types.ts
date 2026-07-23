@@ -7,6 +7,7 @@ export type Permission =
   | 'treasurer'
   | 'bar_manager'
   | 'tea_manager'
+  | 'finance_manager'
 
 export type Token = {
     access_token: string

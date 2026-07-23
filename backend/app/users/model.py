@@ -13,8 +13,9 @@ class Permission(str,Enum):
     cocktail_minister = "cocktail_minister"
     tea_minister = "tea_minister"
     treasurer = "treasurer"
-    tea_manager = "tea_manager"  
-    bar_manager = "bar_manager"  
+    tea_manager = "tea_manager"
+    bar_manager = "bar_manager"
+    finance_manager = "finance_manager"  
     
 class Status(str,Enum):
     pending = "pending"

@@ -152,8 +152,7 @@ function AddWhitelistModal({ isOpen, onClose, onSubmit , onSubmitMultiple }: Pro
         setSubmittingMultiple(true);
         const whitelistList: WhitelistCreate[] = JSON.parse(jsonInput);
         whitelistList.forEach(whitelist => {
-        if (!['bar_manager', 'tea_manager', 'cocktail_minister',
-                 'tea_minister', 'vice_president'].includes(whitelist.permission)) {
+        if (!['bar_manager', 'tea_manager', 'finance_manager'].includes(whitelist.permission)) {
                 setError('越权警告！');
                 return;
             }
@@ -222,6 +221,7 @@ function AddWhitelistModal({ isOpen, onClose, onSubmit , onSubmitMultiple }: Pro
                     >
                         <option value="bar_manager">调酒部管理</option>
                         <option value="tea_manager">茶艺部管理</option>
+                        <option value="finance_manager">财务部管理</option>
                     </select>
                 </div>
                 

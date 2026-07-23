@@ -45,6 +45,7 @@ function HandoverModal({ onCloseHandover }: HandoverModalProps) {
                     <option value="tea_minister">茶艺部长</option>
                     <option value="bar_manager">调酒部管理</option>
                     <option value="tea_manager">茶艺部管理</option>
+                    <option value="finance_manager">财务部管理</option>
                 </select>
             )
         }else if (permission === "treasurer"){

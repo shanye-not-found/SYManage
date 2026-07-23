@@ -107,7 +107,7 @@ def add_manager_into_whitelist(session: Session, whitelist: WhiteListCreate) -> 
     if existing_whitelist:
         raise ValueError("This manager has already exists in whitelist")
     
-    if whitelist.permission != Permission.tea_manager and whitelist.permission != Permission.bar_manager:
+    if whitelist.permission != Permission.tea_manager and whitelist.permission != Permission.bar_manager and whitelist.permission != Permission.finance_manager:
         raise ValueError("Invalid Permission")
     
     new_whitelist = WhiteList(email=whitelist.email, username=whitelist.username, 
@@ -139,7 +139,7 @@ def add_whitelist_all(session: Session, whitelist_json: list[WhiteListCreate]) -
         existing_whitelist = get_whitelist_email(session, email)
         if existing_whitelist:
             raise ValueError(f"Number {count_exist} manager has already exists in whitelist.")
-        if permission != Permission.tea_manager and permission != Permission.bar_manager:
+        if permission != Permission.tea_manager and permission != Permission.bar_manager and permission != Permission.finance_manager:
             raise ValueError(f"Invalid Permission: Number {count_exist} manager.")
         count_exist += 1   
         
@@ -165,6 +165,7 @@ def calculate_highest_permission(permission: Permission, highest_permission: Per
         Permission.tea_minister: 4,
         Permission.tea_manager: 5,
         Permission.bar_manager: 5,
+        Permission.finance_manager: 5,
     }
     
     # 比较并返回等级更高的（数字更小的）
@@ -190,14 +191,14 @@ def get_handover_state(session: Session, target_permission: Permission, from_use
     if from_user.permission == Permission.superadmin:
         if target_permission == Permission.president or target_permission == Permission.treasurer:
             return 1 #不用降自身，需要直接找到permission==target_permission的manager，同时降权和升权，系统中如果没有那就直接加上，需要生成token
-        elif target_permission == Permission.bar_manager or target_permission == Permission.tea_manager:
+        elif target_permission == Permission.bar_manager or target_permission == Permission.tea_manager or target_permission == Permission.finance_manager:
             return 9999 #不用降自身,基本用不到
         else:
             return 2 #需要直接找到permission==target_permission的manager，同时降权和升权，系统中如果没有那就直接加上，不需要生成token
     elif from_user.permission == Permission.president:
         if target_permission == Permission.president:
             return 3 #降自身并升权，需要生成token
-        elif target_permission == Permission.bar_manager or target_permission == Permission.tea_manager:
+        elif target_permission == Permission.bar_manager or target_permission == Permission.tea_manager or target_permission == Permission.finance_manager:
             return 9999 #不用降自身,基本用不到
         else:
             return 2 #不用降自身，需要直接找到permission==target_permission的manager，同时降权和升权，系统中如果没有那就直接加上，不需要生成token
@@ -238,7 +239,7 @@ def create_handover_record(session: Session, handover_table: HandoverTableCreate
             lwl = get_whitelist_email(session, handover_table.to_user_email)
             if not lwl: 
                raise ValueError("The target user does not exist")
-            if handover_table.self_permission != Permission.bar_manager and handover_table.self_permission != Permission.tea_manager:
+            if handover_table.self_permission != Permission.bar_manager and handover_table.self_permission != Permission.tea_manager and handover_table.self_permission != Permission.finance_manager:
                 raise ValueError("Permission error")
             hwl.permission = handover_table.self_permission
             lwl.permission = handover_table.target_permission
@@ -323,7 +324,7 @@ def update_permission(session: Session, update_table: PermissionUpdate) -> Permi
         if not lwl: 
             raise ValueError("The target user does not exist")
         if hwl:
-            if table.self_permission != Permission.bar_manager and table.self_permission != Permission.tea_manager:
+            if table.self_permission != Permission.bar_manager and table.self_permission != Permission.tea_manager and table.self_permission != Permission.finance_manager:
                 raise ValueError("Permission error")
             hwl.permission = table.self_permission
             lwl.permission = table.target_permission
@@ -364,7 +365,7 @@ def update_permission(session: Session, update_table: PermissionUpdate) -> Permi
         hwl = get_whitelist_email(session, table.from_user_email)
         lwl = get_whitelist_email(session, update_table.low_user_email)
         if hwl and lwl:
-            if table.self_permission != Permission.bar_manager and table.self_permission != Permission.tea_manager:
+            if table.self_permission != Permission.bar_manager and table.self_permission != Permission.tea_manager and table.self_permission != Permission.finance_manager:
                 raise ValueError("Permission error")
             hwl.permission = table.self_permission
             lwl.permission = table.target_permission
@@ -388,5 +389,3 @@ def update_permission(session: Session, update_table: PermissionUpdate) -> Permi
             raise ValueError("Invalid user")
     else:
         raise ValueError("Permission error")
-
- 
