@@ -13,6 +13,11 @@ def get_whitelist_email(session: Session, email: str) -> WhiteList | None:
     statement = select(WhiteList).where(WhiteList.email == email) #sql语句
     return session.exec(statement).first() #实际执行
 
+def get_whitelist_by_username(session: Session, username: str) -> WhiteList | None:
+    statement = select(WhiteList).where(WhiteList.username == username)
+    return session.exec(statement).first() 
+
+
 def get_user_by_email(session: Session, email: str) -> User | None:
     statement = select(User).where(User.email == email)
     return session.exec(statement).first()

@@ -72,4 +72,28 @@ export type PermissionUpdatePublic={
     target_permission: Permission
     self_permission: Permission
 }
-    
+
+export type FinanceDirection = 'income' | 'expense'
+
+export type FinanceRecordCreate = {
+    direction: FinanceDirection
+    amount: string
+    description: string
+    created_by_email: string
+}
+
+export type FinanceRecordPublic = {
+    direction: FinanceDirection
+    amount: string
+    created_by_username: string
+    is_deleted: boolean
+    description: string
+    created_at: string
+    current_treasurer_name: string
+}
+
+export type BalancePublic = {
+    balance: string
+    current_treasurer_name: string
+    last_updated_at: string
+}

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useState } from 'react';
-import type { UserCreate } from "../types"
-import { createUser } from "../api/common_api";
+import type { UserCreate } from "../../types"
+import { createUser } from "../../api/common_api";
 import { useNavigate } from 'react-router-dom';
 
 function RegisterPage() {

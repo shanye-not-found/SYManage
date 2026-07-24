@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.db.session import engine
 from app.users.router import user_router
+from app.finance.router import finance_router
 from app.users.service import init_superadmin
 
 
@@ -33,3 +34,4 @@ app.add_middleware(
 
 
 app.include_router(user_router)
+app.include_router(finance_router)

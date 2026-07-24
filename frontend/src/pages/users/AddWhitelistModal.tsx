@@ -5,8 +5,8 @@
     // retired: boolean;
 
 import React, { useState } from 'react';
-import type { Permission , WhitelistCreate , WhitelistPublic } from '../types';
-import { create_whitelist , create_whitelist_multiple } from '../api/UserManage_api';
+import type { Permission , WhitelistCreate , WhitelistPublic } from '../../types';
+import { create_whitelist , create_whitelist_multiple } from '../../api/UserManage_api';
 
 // 批量添加的 JSON 示例，用反引号(模板字符串)才能跨多行、内部还能带双引号。
 // 顶格写，避免前导缩进空格被算进 placeholder。

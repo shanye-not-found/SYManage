@@ -8,6 +8,7 @@ from app.users.model import User
 from app.users.service import get_current_user, authenticate_user, get_whitelist_all, create_handover_record, update_permission
 from app.users.model import Permission
 from app.users.security import create_access_token
+from app.dependencies import require_admin, require_handover_capable
 
 
 user_router = APIRouter(prefix="/users", tags=["users"])
@@ -76,51 +77,59 @@ def get_whitelist(session: Session = Depends(get_db),curr_user: User = Depends(g
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
 @user_router.post("/add_whitelist", response_model=WhitelistPublic)
-def add_whitelist(whitelist_info: WhiteListCreate,curr_user: User = Depends(get_current_user), session: Session = Depends(get_db)) -> WhitelistPublic:
-    if curr_user.whitelist.permission == Permission.superadmin or curr_user.whitelist.permission == Permission.president:
-        try:
-            new_whitelist = add_manager_into_whitelist(session, whitelist_info)
-        except ValueError as e:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-        
-        return whitelist_to_public(new_whitelist) 
-    else:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to add a whitelist")  # 没有权限添加白名单
+def add_whitelist(
+    whitelist_info: WhiteListCreate,
+    curr_user: User = Depends(require_admin),
+    session: Session = Depends(get_db)
+) -> WhitelistPublic:
+    try:
+        new_whitelist = add_manager_into_whitelist(session, whitelist_info)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    return whitelist_to_public(new_whitelist)
             
 
 @user_router.post("/add_whitelist_multiple", response_model=list[WhitelistPublic])
-def add_whitelist_multiple(whitelist_info: list[WhiteListCreate],curr_user: User = Depends(get_current_user), session: Session = Depends(get_db)) -> list[WhitelistPublic]:
-    if curr_user.whitelist.permission == Permission.superadmin or curr_user.whitelist.permission == Permission.president:
-        try:
-            new_whitelists = add_whitelist_all(session, whitelist_info)
-        except ValueError as e:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-        return [whitelist_to_public(new_whitelist) for new_whitelist in new_whitelists]  # 返回添加的多个白名单信息
-    else:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to add multiple whitelist")  # 没有权限添加多个白名单
+def add_whitelist_multiple(
+    whitelist_info: list[WhiteListCreate],
+    curr_user: User = Depends(require_admin),
+    session: Session = Depends(get_db)
+) -> list[WhitelistPublic]:
+    try:
+        new_whitelists = add_whitelist_all(session, whitelist_info)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return [whitelist_to_public(new_whitelist) for new_whitelist in new_whitelists]
     
-@user_router.post("/gen_handover_table", response_model=HandoverTablePublic | PermissionUpdatePublic)  # 生成交接表
-def gen_handover_table(handover_table_info: HandoverTableCreate,curr_user: User = Depends(get_current_user), session: Session = Depends(get_db)) -> HandoverTablePublic | PermissionUpdatePublic:
-    if curr_user.whitelist.permission == Permission.superadmin or curr_user.whitelist.permission == Permission.president or curr_user.whitelist.permission == Permission.treasurer:
-        if curr_user.whitelist.permission == Permission.treasurer and handover_table_info.target_permission != Permission.treasurer:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Treasurer can only handover to Treasurer")  # 财务只能交接给财务
-     
-        try:
-            new_table = create_handover_record(session, handover_table_info, curr_user.email)
-        except ValueError as e:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-        return new_table
-    else:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to gen handover table")  # 没有权限生成交接表
+@user_router.post("/gen_handover_table", response_model=HandoverTablePublic | PermissionUpdatePublic)
+def gen_handover_table(
+    handover_table_info: HandoverTableCreate,
+    curr_user: User = Depends(require_handover_capable),
+    session: Session = Depends(get_db)
+) -> HandoverTablePublic | PermissionUpdatePublic:
+    # 财务只能交接给财务的特殊逻辑
+    if curr_user.whitelist.permission == Permission.treasurer and handover_table_info.target_permission != Permission.treasurer:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Treasurer can only handover to Treasurer")
+
+    try:
+        new_table = create_handover_record(session, handover_table_info, curr_user.email)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return new_table
                
-@user_router.post("/handover_permission", response_model=PermissionUpdatePublic)   
-def handover_permission(update_table: PermissionUpdate, curr_user: User = Depends(get_current_user), session: Session = Depends(get_db)) -> PermissionUpdatePublic:
-    if curr_user.email == update_table.low_user_email:
-        try:
-            table = update_permission(session, update_table)
-        except ValueError as e:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-        return table
-    
-    else:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to handover permission")  # 没有权限交接权限
+@user_router.post("/handover_permission", response_model=PermissionUpdatePublic)
+def handover_permission(
+    update_table: PermissionUpdate,
+    curr_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db)
+) -> PermissionUpdatePublic:
+    # 只有降权方本人可以确认交接
+    if curr_user.email != update_table.low_user_email:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to handover permission")
+
+    try:
+        table = update_permission(session, update_table)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return table

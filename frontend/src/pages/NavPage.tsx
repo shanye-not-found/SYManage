@@ -10,6 +10,7 @@ function NavPage() {
             <h1>欢迎，{currentUser?.username}！</h1>
             <button onClick={logout}>注销</button>
             <Link to="/usermanage">人员管理</Link>
+            <Link to='/finance'>财务管理</Link>
         </div>
     )
 }

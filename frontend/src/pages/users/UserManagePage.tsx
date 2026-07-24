@@ -1,11 +1,11 @@
 import React from 'react';
 import { useState ,useEffect } from 'react';
-import { get_whitelist } from '../api/UserManage_api';
-import type { WhitelistPublic } from '../types';
-import UserCard from '../components/UserCard'
+import { get_whitelist } from '../../api/UserManage_api';
+import type { WhitelistPublic } from '../../types';
+import UserCard from '../../components/UserCard'
 import AddWhitelistModal from './AddWhitelistModal';
 import HandoverModal from './HandoverModal';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 function UserManagePage() {
     const now = new Date(); 
     const nowYear = now.getFullYear(); 

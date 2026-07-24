@@ -1,9 +1,9 @@
 import React, { useEffect } from 'react';
 import { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import type { Permission, PermissionUpdate } from '../types';
-import { create_handover_table, update_permission } from '../api/UserManage_api';
-import type { HandoverTableCreate,  } from '../types';
+import { useAuth } from '../../contexts/AuthContext';
+import type { Permission, PermissionUpdate } from '../../types';
+import { create_handover_table, update_permission } from '../../api/UserManage_api';
+import type { HandoverTableCreate,  } from '../../types';
 
 type HandoverModalProps = {
     onCloseHandover: () => void;
